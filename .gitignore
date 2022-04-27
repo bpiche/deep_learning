@@ -1,3 +1,4 @@
 data/*.csv
 models/*.model
 log.txt
+out/*.png
