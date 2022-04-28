@@ -15,19 +15,9 @@ import torchvision.transforms as transforms
 import torchvision.models as models
 
 
-num_steps = 300
-style_weight = 1000000
-content_weight = 1
 buffer_size = 1024
-
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 imsize = (buffer_size, buffer_size) if torch.cuda.is_available() else (128, 128)
-
-loader = transforms.Compose([
-    transforms.Resize(imsize),
-    transforms.ToTensor()])
-
-unloader = transforms.ToPILImage()
 
 warnings.filterwarnings("ignore")
 cnn = models.vgg19(pretrained=True).features.to(device).eval()
@@ -36,6 +26,12 @@ cnn_normalization_std = torch.tensor([0.229, 0.224, 0.225]).to(device)
 
 content_layers_default = ['conv_4']
 style_layers_default = ['conv_1', 'conv_2', 'conv_3', 'conv_4', 'conv_5']
+
+loader = transforms.Compose([
+    transforms.Resize(imsize),
+    transforms.ToTensor()])
+
+unloader = transforms.ToPILImage()
 
 
 def image_loader(image_name):
@@ -197,6 +193,10 @@ def run_style_transfer(cnn, normalization_mean, normalization_std,
 if __name__ == "__main__":
     """
     """
+    num_steps = 300
+    style_weight = 1000000
+    content_weight = 1
+
     d_path = {}
     d_path['content'] = tf.keras.utils.get_file('kyoto.jpg',
                             # 'https://pytorch.org/tutorials/_static/img/neural-style/dancing.jpg',
