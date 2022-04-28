@@ -13,19 +13,12 @@ import matplotlib.pyplot as plt
 import warnings
 
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-device
-
-warnings.filterwarnings("ignore")
-cnn = torchvision.models.vgg19(pretrained=True).features.to(device).eval()
-
-# these are arguments to closure()
-num_steps = 300 # originally 20
-style_weight = 1000000 # originally 5000
+num_steps = 300
+style_weight = 1000000
 content_weight = 1
-d_images = {}
 
 buffer_size = 1024
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 imsize = (buffer_size, buffer_size) if torch.cuda.is_available() else (128, 128)
 
 loader = torchvision.transforms.Compose([
@@ -34,6 +27,8 @@ loader = torchvision.transforms.Compose([
 
 unloader = torchvision.transforms.ToPILImage() 
 
+warnings.filterwarnings("ignore")
+cnn = torchvision.models.vgg19(pretrained=True).features.to(device).eval()
 cnn_normalization_mean = torch.tensor([0.485, 0.456, 0.406]).to(device)
 cnn_normalization_std = torch.tensor([0.229, 0.224, 0.225]).to(device)
 
@@ -49,17 +44,13 @@ def image_loader(image_name):
     return image.to(device, torch.float)
 
 
-def imshow_tensor(tensor, ax=None):
+def im_save(tensor, title):
     """
     """
     image = tensor.cpu().clone()
     image = image.squeeze(0)
     image = unloader(image)
-    image.save('./out/output_image.png', 'PNG')
-    if ax:
-        ax.imshow(image)
-    else:
-        plt.imshow(image)
+    image.save(title, 'PNG')
 
 
 class ContentLoss(nn.Module):
@@ -155,7 +146,8 @@ def get_style_model_and_losses(cnn, normalization_mean, normalization_std,
 def closure():
     """
     """
-    input_img.data.clamp_(0, 1)
+    with torch.no_grad():
+        input_img.clamp_(0, 1)
     optimizer.zero_grad()
     model(input_img)
     style_score = 0
@@ -169,12 +161,11 @@ def closure():
     loss = style_score + content_score
     loss.backward()
     run[0] += 1
-    if run[0] % 2 == 0:
+    if run[0] % 50 == 0:
         print("run {}:".format(run))
         print('Style Loss : {:4f} Content Loss: {:4f}'.format(
             style_score.item(), content_score.item()))
-        input_img.data.clamp_(0, 1)
-        d_images[run[0]] = input_img
+        # input_img.data.clamp_(0, 1) # experimental
         print()
     return style_score + content_score
 
@@ -204,27 +195,15 @@ if __name__ == "__main__":
 
     assert style_img.size() == content_img.size(), \
         "we need to import style and content images of the same size"
-    
-    # if you want to use white noise instead uncomment the below line:
-    # input_img = torch.randn(content_img.data.size(), device=device)
 
-    print('\nBuilding the style transfer model..')
+    print('Building the style transfer model..')
     model, style_losses, content_losses = get_style_model_and_losses(cnn,
         cnn_normalization_mean, cnn_normalization_std, style_img, content_img)
-    input_img.requires_grad_(True)
-    model.requires_grad_(False)
     optimizer = get_input_optimizer(input_img)
     run = [0]
     while run[0] <= num_steps:
         optimizer.step(closure)
-    input_img.data.clamp_(0, 1)
+    with torch.no_grad():
+        input_img.clamp_(0, 1)
 
-    fig, axes = plt.subplots(1, 3, figsize=(16, 8))
-    d_img = {"Content": content_img,
-             "Style": style_img,
-             "Output": input_img}
-
-    for i, key in enumerate(d_img.keys()):
-        imshow_tensor(d_img[key], ax=axes[i])
-        axes[i].set_title(f"{key} Image")
-        axes[i].axis('off')
+    im_save(input_img, title='./out/output_image.png')

@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import copy
 import warnings
 import torch
 import torch.nn as nn
@@ -13,14 +14,14 @@ import matplotlib.pyplot as plt
 import torchvision.transforms as transforms
 import torchvision.models as models
 
-import copy
 
+num_steps = 300
+style_weight = 1000000
+content_weight = 1
+buffer_size = 1024
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-device
-
-buffer_size = 1024
-imsize = (buffer_size, buffer_size) if torch.cuda.is_available() else 128
+imsize = (buffer_size, buffer_size) if torch.cuda.is_available() else (128, 128)
 
 loader = transforms.Compose([
     transforms.Resize(imsize),
@@ -38,22 +39,20 @@ style_layers_default = ['conv_1', 'conv_2', 'conv_3', 'conv_4', 'conv_5']
 
 
 def image_loader(image_name):
+    """
+    """
     image = Image.open(image_name)
     image = loader(image).unsqueeze(0)
     return image.to(device, torch.float)
 
 
-def imshow(tensor, title=None):
+def im_save(tensor, title):
     """
     """
     image = tensor.cpu().clone()
     image = image.squeeze(0)
     image = unloader(image)
-    plt.imshow(image)
-    image.save('out/neural_image.png', 'PNG')
-    if title is not None:
-        plt.title(title)
-    plt.pause(0.001)
+    image.save(title, 'PNG')
 
 
 class ContentLoss(nn.Module):
@@ -152,10 +151,9 @@ def get_input_optimizer(input_img):
 
 
 def run_style_transfer(cnn, normalization_mean, normalization_std,
-                       content_img, style_img, input_img, num_steps=300,
-                       style_weight=1000000, content_weight=1):
+                       content_img, style_img, input_img, num_steps,
+                       style_weight, content_weight):
     """
-    Run the style transfer.
     """
     print('Building the style transfer model..')
     model, style_losses, content_losses = get_style_model_and_losses(cnn,
@@ -167,6 +165,8 @@ def run_style_transfer(cnn, normalization_mean, normalization_std,
     run = [0]
     while run[0] <= num_steps:
         def closure():
+            """
+            """
             with torch.no_grad():
                 input_img.clamp_(0, 1)
             optimizer.zero_grad()
@@ -206,6 +206,7 @@ if __name__ == "__main__":
                             # 'https://pytorch.org/tutorials/_static/img/neural-style/picasso.jpg',
                             'https://wallpaperset.com/w/full/2/2/9/207342.jpg',
                             )
+
     style_img = image_loader(d_path['style'])[:, :, :, :buffer_size]
     content_img = image_loader(d_path['content'])[:, :, :, :buffer_size]
     input_img = content_img.clone()
@@ -213,10 +214,9 @@ if __name__ == "__main__":
     assert style_img.size() == content_img.size(), \
         "we need to import style and content images of the same size"
 
-    # if you want to use white noise instead uncomment the below line:
-    # input_img = torch.randn(content_img.data.size(), device=device)
+    output = run_style_transfer(cnn, cnn_normalization_mean, 
+                                cnn_normalization_std, content_img, 
+                                style_img, input_img, num_steps=num_steps, 
+                                style_weight=style_weight, content_weight=content_weight)
 
-    output = run_style_transfer(cnn, cnn_normalization_mean, cnn_normalization_std,
-                            content_img, style_img, input_img, num_steps=300, 
-                            style_weight=1000000, content_weight=1)
-    imshow(output, title='Output Image')
+    im_save(output, title='./out/neural_image.png')
