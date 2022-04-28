@@ -10,3 +10,6 @@ cifar_net.pth
 CLIP/
 guided-diffusion/
 output.png
+LibriSpeech/
+test-clean.tar.gz
+train-clean-100.tar.gz
