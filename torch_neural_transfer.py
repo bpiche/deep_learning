@@ -213,11 +213,10 @@ if __name__ == "__main__":
     assert style_img.size() == content_img.size(), \
         "we need to import style and content images of the same size"
 
-    input_img = content_img.clone()
     # if you want to use white noise instead uncomment the below line:
     # input_img = torch.randn(content_img.data.size(), device=device)
 
-    # imshow(input_img, title='Input Image')
     output = run_style_transfer(cnn, cnn_normalization_mean, cnn_normalization_std,
-                            content_img, style_img, input_img)
+                            content_img, style_img, input_img, num_steps=300, 
+                            style_weight=1000000, content_weight=1)
     imshow(output, title='Output Image')

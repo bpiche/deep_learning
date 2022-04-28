@@ -16,6 +16,15 @@ import warnings
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 device
 
+warnings.filterwarnings("ignore")
+cnn = torchvision.models.vgg19(pretrained=True).features.to(device).eval()
+
+# these are arguments to closure()
+num_steps = 300 # originally 20
+style_weight = 1000000 # originally 5000
+content_weight = 1
+d_images = {}
+
 buffer_size = 1024
 imsize = (buffer_size, buffer_size) if torch.cuda.is_available() else (128, 128)
 
@@ -195,34 +204,25 @@ if __name__ == "__main__":
 
     assert style_img.size() == content_img.size(), \
         "we need to import style and content images of the same size"
-
-    warnings.filterwarnings("ignore")
-    cnn = torchvision.models.vgg19(pretrained=True).features.to(device).eval()
-    model, style_losses, content_losses = get_style_model_and_losses(cnn, cnn_normalization_mean, cnn_normalization_std, style_img, content_img)
-    optimizer = get_input_optimizer(input_img)
-
-    # these are arguments to closure()
-    num_steps = 20
-    style_weight = 1000000 # originally 5000
-    content_weight = 1
-
-    input_img = content_img[:, :, :, :buffer_size].clone()
-    d_images = {}
+    
+    # if you want to use white noise instead uncomment the below line:
+    # input_img = torch.randn(content_img.data.size(), device=device)
 
     print('\nBuilding the style transfer model..')
     model, style_losses, content_losses = get_style_model_and_losses(cnn,
         cnn_normalization_mean, cnn_normalization_std, style_img, content_img)
+    input_img.requires_grad_(True)
+    model.requires_grad_(False)
     optimizer = get_input_optimizer(input_img)
-
     run = [0]
     while run[0] <= num_steps:
         optimizer.step(closure)
-        input_img.data.clamp_(0, 1)
+    input_img.data.clamp_(0, 1)
 
     fig, axes = plt.subplots(1, 3, figsize=(16, 8))
     d_img = {"Content": content_img,
-            "Style": style_img,
-            "Output": input_img}
+             "Style": style_img,
+             "Output": input_img}
 
     for i, key in enumerate(d_img.keys()):
         imshow_tensor(d_img[key], ax=axes[i])
