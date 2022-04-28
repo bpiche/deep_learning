@@ -1,30 +1,35 @@
-import pandas as pd
-import copy
+from __future__ import print_function
 
+import warnings
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torchvision
+import torch.optim as optim
 import tensorflow as tf
 
-from torchviz import make_dot
 from PIL import Image
 import matplotlib.pyplot as plt
-import warnings
+
+import torchvision.transforms as transforms
+import torchvision.models as models
+
+import copy
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 device
 
 buffer_size = 1024
-imsize = (buffer_size, buffer_size) if torch.cuda.is_available() else (128, 128)
+imsize = (buffer_size, buffer_size) if torch.cuda.is_available() else 128
 
-loader = torchvision.transforms.Compose([
-        torchvision.transforms.Resize(imsize),
-        torchvision.transforms.ToTensor()])
+loader = transforms.Compose([
+    transforms.Resize(imsize),
+    transforms.ToTensor()])
 
-unloader = torchvision.transforms.ToPILImage() 
+unloader = transforms.ToPILImage()
 
+warnings.filterwarnings("ignore")
+cnn = models.vgg19(pretrained=True).features.to(device).eval()
 cnn_normalization_mean = torch.tensor([0.485, 0.456, 0.406]).to(device)
 cnn_normalization_std = torch.tensor([0.229, 0.224, 0.225]).to(device)
 
@@ -33,24 +38,22 @@ style_layers_default = ['conv_1', 'conv_2', 'conv_3', 'conv_4', 'conv_5']
 
 
 def image_loader(image_name):
-    """
-    """
     image = Image.open(image_name)
     image = loader(image).unsqueeze(0)
     return image.to(device, torch.float)
 
 
-def imshow_tensor(tensor, ax=None):
+def imshow(tensor, title=None):
     """
     """
     image = tensor.cpu().clone()
     image = image.squeeze(0)
     image = unloader(image)
-    image.save('./out/output_image.png', 'PNG')
-    if ax:
-        ax.imshow(image)
-    else:
-        plt.imshow(image)
+    plt.imshow(image)
+    image.save('out/neural_image.png', 'PNG')
+    if title is not None:
+        plt.title(title)
+    plt.pause(0.001)
 
 
 class ContentLoss(nn.Module):
@@ -68,11 +71,10 @@ class ContentLoss(nn.Module):
 def gram_matrix(input):
     """
     """
-    a, b, c, d = input.size() 
+    a, b, c, d = input.size()  
     features = input.view(a * b, c * d)
-    G = torch.mm(features, features.t())  
-    G_norm = G.div(a * b * c * d)
-    return G_norm
+    G = torch.mm(features, features.t())
+    return G.div(a * b * c * d)
 
 
 class StyleLoss(nn.Module):
@@ -81,7 +83,7 @@ class StyleLoss(nn.Module):
     def __init__(self, target_feature):
         super(StyleLoss, self).__init__()
         self.target = gram_matrix(target_feature).detach()
-    
+
     def forward(self, input):
         G = gram_matrix(input)
         self.loss = F.mse_loss(G, self.target)
@@ -95,7 +97,7 @@ class Normalization(nn.Module):
         super(Normalization, self).__init__()
         self.mean = torch.tensor(mean).view(-1, 1, 1)
         self.std = torch.tensor(std).view(-1, 1, 1)
-    
+
     def forward(self, img):
         return (img - self.mean) / self.std
 
@@ -106,13 +108,12 @@ def get_style_model_and_losses(cnn, normalization_mean, normalization_std,
                                style_layers=style_layers_default):
     """
     """
-    cnn = copy.deepcopy(cnn)
     normalization = Normalization(normalization_mean, normalization_std).to(device)
     content_losses = []
     style_losses = []
     model = nn.Sequential(normalization)
     i = 0
-    for n_child, layer in enumerate(cnn.children()):
+    for layer in cnn.children():
         if isinstance(layer, nn.Conv2d):
             i += 1
             name = 'conv_{}'.format(i)
@@ -143,38 +144,54 @@ def get_style_model_and_losses(cnn, normalization_mean, normalization_std,
     return model, style_losses, content_losses
 
 
-def closure():
-    """
-    """
-    input_img.data.clamp_(0, 1)
-    optimizer.zero_grad()
-    model(input_img)
-    style_score = 0
-    content_score = 0
-    for sl in style_losses:
-        style_score += sl.loss
-    for cl in content_losses:
-        content_score += cl.loss
-    style_score *= style_weight
-    content_score *= content_weight
-    loss = style_score + content_score
-    loss.backward()
-    run[0] += 1
-    if run[0] % 2 == 0:
-        print("run {}:".format(run))
-        print('Style Loss : {:4f} Content Loss: {:4f}'.format(
-            style_score.item(), content_score.item()))
-        input_img.data.clamp_(0, 1)
-        d_images[run[0]] = input_img
-        print()
-    return style_score + content_score
-
-
 def get_input_optimizer(input_img):
     """
     """
-    optimizer = torch.optim.LBFGS([input_img.requires_grad_()])
+    optimizer = optim.LBFGS([input_img])
     return optimizer
+
+
+def run_style_transfer(cnn, normalization_mean, normalization_std,
+                       content_img, style_img, input_img, num_steps=300,
+                       style_weight=1000000, content_weight=1):
+    """
+    Run the style transfer.
+    """
+    print('Building the style transfer model..')
+    model, style_losses, content_losses = get_style_model_and_losses(cnn,
+        normalization_mean, normalization_std, style_img, content_img)
+    input_img.requires_grad_(True)
+    model.requires_grad_(False)
+    optimizer = get_input_optimizer(input_img)
+    print('Optimizing..')
+    run = [0]
+    while run[0] <= num_steps:
+        def closure():
+            with torch.no_grad():
+                input_img.clamp_(0, 1)
+            optimizer.zero_grad()
+            model(input_img)
+            style_score = 0
+            content_score = 0
+            for sl in style_losses:
+                style_score += sl.loss
+            for cl in content_losses:
+                content_score += cl.loss
+            style_score *= style_weight
+            content_score *= content_weight
+            loss = style_score + content_score
+            loss.backward()
+            run[0] += 1
+            if run[0] % 50 == 0:
+                print("run {}:".format(run))
+                print('Style Loss : {:4f} Content Loss: {:4f}'.format(
+                    style_score.item(), content_score.item()))
+                print()
+            return style_score + content_score
+        optimizer.step(closure)
+    with torch.no_grad():
+        input_img.clamp_(0, 1)
+    return input_img
 
 
 if __name__ == "__main__":
@@ -186,9 +203,9 @@ if __name__ == "__main__":
                             'https://wallpaperset.com/w/full/6/2/b/124421.jpg',
                             )
     d_path['style'] = tf.keras.utils.get_file('starry_night.jpg',
-                        # 'https://pytorch.org/tutorials/_static/img/neural-style/picasso.jpg',
-                        'https://wallpaperset.com/w/full/2/2/9/207342.jpg',
-                        )
+                            # 'https://pytorch.org/tutorials/_static/img/neural-style/picasso.jpg',
+                            'https://wallpaperset.com/w/full/2/2/9/207342.jpg',
+                            )
     style_img = image_loader(d_path['style'])[:, :, :, :buffer_size]
     content_img = image_loader(d_path['content'])[:, :, :, :buffer_size]
     input_img = content_img.clone()
@@ -196,35 +213,11 @@ if __name__ == "__main__":
     assert style_img.size() == content_img.size(), \
         "we need to import style and content images of the same size"
 
-    warnings.filterwarnings("ignore")
-    cnn = torchvision.models.vgg19(pretrained=True).features.to(device).eval()
-    model, style_losses, content_losses = get_style_model_and_losses(cnn, cnn_normalization_mean, cnn_normalization_std, style_img, content_img)
-    optimizer = get_input_optimizer(input_img)
+    input_img = content_img.clone()
+    # if you want to use white noise instead uncomment the below line:
+    # input_img = torch.randn(content_img.data.size(), device=device)
 
-    # these are arguments to closure()
-    num_steps = 20
-    style_weight = 1000000 # originally 5000
-    content_weight = 1
-
-    input_img = content_img[:, :, :, :buffer_size].clone()
-    d_images = {}
-
-    print('\nBuilding the style transfer model..')
-    model, style_losses, content_losses = get_style_model_and_losses(cnn,
-        cnn_normalization_mean, cnn_normalization_std, style_img, content_img)
-    optimizer = get_input_optimizer(input_img)
-
-    run = [0]
-    while run[0] <= num_steps:
-        optimizer.step(closure)
-        input_img.data.clamp_(0, 1)
-
-    fig, axes = plt.subplots(1, 3, figsize=(16, 8))
-    d_img = {"Content": content_img,
-            "Style": style_img,
-            "Output": input_img}
-
-    for i, key in enumerate(d_img.keys()):
-        imshow_tensor(d_img[key], ax=axes[i])
-        axes[i].set_title(f"{key} Image")
-        axes[i].axis('off')
+    # imshow(input_img, title='Input Image')
+    output = run_style_transfer(cnn, cnn_normalization_mean, cnn_normalization_std,
+                            content_img, style_img, input_img)
+    imshow(output, title='Output Image')
