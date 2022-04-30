@@ -323,6 +323,8 @@ if __name__ == "__main__":
   accuracy_per_class(predictions, true_vals)
   gc.collect()
 
+  os.rename(f'./models/{model_name}_1.model', f'./models/{model_name}.model')
   os.remove(f'./models/{model_name}_2.model')
   os.remove(f'./models/{model_name}_3.model')
-  os.rename(f'./models/{model_name}_1.model', f'./models/{model_name}.model')
+  os.remove(f'./models/{model_name}_4.model')
+  os.remove(f'./models/{model_name}_5.model')

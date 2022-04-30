@@ -10,6 +10,7 @@ output.png
 LibriSpeech/
 test-clean.tar.gz
 train-clean-100.tar.gz
+nlp/__pycache__
 
 # computer vision
 computer_vision/out/*.png
