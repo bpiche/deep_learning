@@ -11,9 +11,14 @@ LibriSpeech/
 test-clean.tar.gz
 train-clean-100.tar.gz
 nlp/__pycache__
+nlp/data/jd_data_5000.json*
 
 # computer vision
 computer_vision/out/*.png
 computer_vision/data/cifar-10-batches-py/
 computer_vision/data/cifar-10-python.tar.gz
 computer_vision/cifar_net.pth
+computer_vision/min-dalle/
+
+# apple
+*:com..apple.macl
