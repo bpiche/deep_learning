@@ -94,7 +94,7 @@ if __name__ == "__main__":
     """
     """
     batch_size = 3
-    file_path = './data/dnb-channel_data.csv'
+    file_path = './data/dnb_care_sales-channel_data.csv'
     model_name = re.sub('./data/', '', file_path)
     model_name = re.sub('.csv', '', model_name)
 

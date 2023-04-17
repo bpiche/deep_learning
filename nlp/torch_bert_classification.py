@@ -182,7 +182,7 @@ def train_model(model_name):
         progress_bar.set_postfix({'training_loss': '{:.3f}'.format(loss.item()/len(batch))})
     torch.save(model.state_dict(), f'./models/{model_name}_{epoch}.model')
     tqdm.write(f'\nEpoch {epoch}')
-    loss_train_avg = loss_train_total/len(dataloader_train)            
+    loss_train_avg = loss_train_total/len(dataloader_train)
     tqdm.write(f'Training loss: {loss_train_avg}')
     val_loss, predictions, true_vals = evaluate(dataloader_validation)
     val_f1 = f1_score_func(predictions, true_vals)
@@ -206,16 +206,19 @@ if __name__ == "__main__":
 
   set_global_logging_level(logging.CRITICAL, ["transformers", "nlp", "torch", "tensorflow", "tensorboard", "wandb"])
 
-  file_path = './data/dnb_care_sales-channel_data.csv'
+  file_path = './data/jd_data_5000.json'
   model_name = re.sub('./data/', '', file_path)
-  model_name = re.sub('.csv', '', model_name)
+  model_name = re.sub('.json', '', model_name)
 
   # read the training data
   print(f'Reading training data from {file_path}')
   le = preprocessing.LabelEncoder()
-  json_df = pd.read_csv(file_path)
-  json_df = json_df[['text', 'Rating']]
-  json_df.columns = ['text', 'label']
+
+  # using the job type data instead
+  # json_df = pd.read_csv(file_path)
+  json_df = pd.read_json(file_path, lines=True)
+  # json_df = json_df[['text', 'Rating']]
+  # json_df.columns = ['text', 'label']
   json_df['label'] = le.fit_transform(json_df['label'])
   json_df['text'] = json_df['text'].astype(str)
 
@@ -309,6 +312,7 @@ if __name__ == "__main__":
   print(f'Training {model_name}')
   train_model(model_name=model_name)
 
+  # todo: test model against some test cases
   # evaluate the model against the test data
   print('\nCalculating per-class accuracy\n')
   model = BertForSequenceClassification.from_pretrained('bert-base-uncased',
@@ -323,6 +327,8 @@ if __name__ == "__main__":
   accuracy_per_class(predictions, true_vals)
   gc.collect()
 
+  os.rename(f'./models/{model_name}_1.model', f'./models/{model_name}.model')
   os.remove(f'./models/{model_name}_2.model')
   os.remove(f'./models/{model_name}_3.model')
-  os.rename(f'./models/{model_name}_1.model', f'./models/{model_name}.model')
+  os.remove(f'./models/{model_name}_4.model')
+  os.remove(f'./models/{model_name}_5.model')
