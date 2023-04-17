@@ -12,6 +12,7 @@ test-clean.tar.gz
 train-clean-100.tar.gz
 nlp/__pycache__
 nlp/data/jd_data_5000.json*
+nlp/cached_*
 
 # computer vision
 computer_vision/out/*.png

@@ -1,0 +1,5 @@
+combined
+<s>Can you tell me what far part 7 is?</s>>>>><p>What is FAR part 7?</p>
+<s>What is far part 7?</s>>>>><p>Far part 7</p>
+<s>I want to know what far part 7 is</s>>>>><p>What is far part 7?</p>
+<s>Can you tell me what far part 7 is?</s>>>>><p>What is far part 7?</p>
