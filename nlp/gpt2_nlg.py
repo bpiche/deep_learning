@@ -8,7 +8,7 @@ model = GPT2LMHeadModel.from_pretrained('gpt2', pad_token_id=tokenizer.eos_token
 if __name__ == "__main__":
     """
     """
-    corpus = '''Hello, thank you for calling the company. This call is being recorded for training purposes. How may I help you?'''
+    corpus = '''Does Buy American apply to private projects, or private contractors on public projects?'''
     print(f'Generating text for the input:\n"{corpus}"\n')
 
     input_ids = tokenizer.encode(corpus, return_tensors="pt")
@@ -25,10 +25,10 @@ if __name__ == "__main__":
         input_ids, 
         do_sample=True, 
         # min_length=100,
-        max_length=100, 
-        top_k=100, 
+        max_length=50, 
+        top_k=50, 
         # top_p=0.92, 
-        # temperature=0.7
+        temperature=0.08,
     )
 
     response = tokenizer.decode(sample_output_top_k[0], 
