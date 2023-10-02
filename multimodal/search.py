@@ -51,8 +51,8 @@ def compare_docs(query, df):
     for index, row in results_df.iterrows():
         response['results'].append({'title': row['Title'], 
                                     'authors': row['Authors'],
-                                    'abstract': row['Abstract'],
-                                    'key_findings': row['Key Findings'],
+                                    # 'abstract': row['Abstract'],
+                                    # 'key_findings': row['Key Findings'],
                                     'similarity': row['similarity']})
     return response
 

@@ -10,19 +10,20 @@ source ~/.venv/deep/bin/activate
 (deep) $> python -m pip install --upgrade pip
 ```
 
-Install `transformers` from source for Nougat
+Install `transformers` from source (for Nougat)
 ```
 (deep) $> pip install git+https://github.com/huggingface/transformers
 ```
 
 Install the rest of the dependencies. The main ones are
-`pip install Pillow torch pymupdf markdown-to-json`
-
+`Pillow torch pymupdf markdown-to-json`
 ```
 (deep) $> python -m pip install -r requirements.txt
 ```
 
-Find a few research papers and dump them into the `./data` subdirectory
+### DocumentAI
+
+Find a few research papers and dump them into the `./data` subdirectory. You can use any papers you like.
 ```
 ./data/
     - dit_lm.pdf
@@ -31,17 +32,23 @@ Find a few research papers and dump them into the `./data` subdirectory
     - lilt_lm.pdf
 ```
 
-All you gotta do now is run the mainfile with the right arguments
+All you gotta do now is run the mainfile with the right arguments. If you use the `--all` flag, it will read all of the pdfs in that directory, one at a time. You can alternatively use the `--filename` flag if you just want to point it to one pdf.
 ```
-(deep) $> python pipeline.py --filename data/lilt_lm.pdf
+(deep) $> python pipeline.py [--all|--filename]
 ```
 
-It's gonna write a couple of files back to the `/.data` folder
+It's gonna write a couple of files back to the `/.data` folder. The Nougat output is a markdown file with all of the fields from the original paper. I take those files and apply a bunch of string replacement rules on them to normalize the markdown headers and the spelling of the main fields (Title, Authors, Abstract, Key Findings, References). 
 ```
 ./data/
+    ...
     - lilt_lm.md # Nougat output
     - lilt_lm.json # my postprocessed output
+    ...
 ```
 
-You can do this with any files you dump into the `/.data` folder.
-Just make sure you refer to them properly with the `--filename` argument.
+### Search
+
+Once you have written a few .json responses to the `/.data` subdirectory, you will be able to effectively use the search function. Make sure you give it a `--query` or else it will default to using the 'Show me a paper about the LayoutLMv3 model' query. This function quietly writes a `response.json` file to the `./data` subdirectory. It's a ranked list of (Title, Author, Abstract, Key Findingss, similarity) dicts, sorted by (cosine) similiarity score.
+```
+(deep) $> python search.py --query "Show me the DIT LM model paper"
+```
