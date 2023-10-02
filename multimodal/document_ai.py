@@ -6,7 +6,7 @@ from collections import defaultdict
 
 from rasterize_paper import rasterize_paper
 from PIL import Image
-
+from tqdm import tqdm
 
 processor = NougatProcessor.from_pretrained("facebook/nougat-base")
 model = VisionEncoderDecoderModel.from_pretrained("facebook/nougat-base")
@@ -75,25 +75,36 @@ class StoppingCriteriaScores(StoppingCriteria):
         return all(self.stopped.values()) and len(self.stopped) > 0
 
 
-# prepare PDF image for the model
-filepath = "data/lilt_lm.pdf"
-images = rasterize_paper(pdf=filepath, return_pil=True)
+# TODO: make a param flag for writing to a file
+def nougat(filepath):
+    """
+    """
+    images = rasterize_paper(pdf=filepath, return_pil=True)
+    output_md = filepath.replace(".pdf", ".md")
+    output_lines = []
+    for i in tqdm(images):
+        image = Image.open(i)
+        pixel_values = processor(image, return_tensors="pt").pixel_values
+        # autoregressively generate tokens, with custom stopping criteria (as defined by the Nougat authors)
+        outputs = model.generate(pixel_values.to(device),
+                                min_length=1,
+                                max_length=3584,
+                                bad_words_ids=[[processor.tokenizer.unk_token_id]],
+                                return_dict_in_generate=True,
+                                output_scores=True,
+                                stopping_criteria=StoppingCriteriaList([StoppingCriteriaScores()]),
+        )
+        sequence = processor.batch_decode(outputs[0], skip_special_tokens=True)[0]
+        sequence = processor.post_process_generation(sequence, fix_markdown=False)
+        output_lines.append(sequence)
+        # write the generated markdown to a file
+        with open(output_md, "a") as f:
+            f.write(sequence)
+    return output_lines
 
-output_md = filepath.replace(".pdf", ".md")
-for i in images:
-    image = Image.open(i)
-    pixel_values = processor(image, return_tensors="pt").pixel_values
-    # autoregressively generate tokens, with custom stopping criteria (as defined by the Nougat authors)
-    outputs = model.generate(pixel_values.to(device),
-                            min_length=1,
-                            max_length=3584,
-                            bad_words_ids=[[processor.tokenizer.unk_token_id]],
-                            return_dict_in_generate=True,
-                            output_scores=True,
-                            stopping_criteria=StoppingCriteriaList([StoppingCriteriaScores()]),
-    )
-    sequence = processor.batch_decode(outputs[0], skip_special_tokens=True)[0]
-    sequence = processor.post_process_generation(sequence, fix_markdown=False)
-    # write the generated markdown to a file
-    with open(output_md, "a") as f:
-        f.write(sequence)
+
+if __name__ == "__main__":
+    """
+    python multimodal/document_ai.py
+    """
+    nougat("data/lilt_lm.pdf")
