@@ -36,3 +36,6 @@ It's gonna write a couple of files back to the `/.data` folder
     - lilt_lm.md # Nougat output
     - lilt_lm.json # my postprocessed output
 ```
+
+You can do this with any files you dump into the `/.data` folder.
+Just make sure you refer to them properly with the `--filename` argument.
