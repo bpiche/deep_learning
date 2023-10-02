@@ -16,6 +16,7 @@ nlp/data/jd_data_5000.json*
 # multimodal
 multimodal/data/*.pdf
 multimodal/data/*.md
+multimodal/data/*.json
 
 # computer vision
 computer_vision/out/*.png
