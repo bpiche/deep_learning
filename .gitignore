@@ -13,6 +13,8 @@ train-clean-100.tar.gz
 nlp/__pycache__
 nlp/data/jd_data_5000.json*
 
+multimodal/__pycache__
+
 # multimodal
 multimodal/data/*.pdf
 multimodal/data/*.md
