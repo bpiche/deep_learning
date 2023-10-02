@@ -8,12 +8,18 @@ Create a new python3.10 virtual environment
 python3.10 -m venv ~/.venv/deep
 source ~/.venv/deep/bin/activate
 (deep) $> python -m pip install --upgrade pip
-(deep) $> python -m pip install -r requirements.txt
 ```
 
-You might need to install `transformers` from source for Nougat
+Install `transformers` from source for Nougat
 ```
 (deep) $> pip install git+https://github.com/huggingface/transformers
+```
+
+Install the rest of the dependencies. The main ones are
+`pip install Pillow torch pymupdf markdown-to-json`
+
+```
+(deep) $> python -m pip install -r requirements.txt
 ```
 
 Find a few research papers and dump them into the `./data` subdirectory
