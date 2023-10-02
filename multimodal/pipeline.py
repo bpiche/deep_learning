@@ -1,4 +1,5 @@
 import re
+import glob
 import json
 import argparse
 import document_ai
@@ -7,6 +8,7 @@ import markdown_to_json
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--filename", type=str, default="data/lilt_lm.pdf")
+parser.add_argument('--all', dest='all', action='store_true')
 args = parser.parse_args()
 
 
@@ -47,11 +49,20 @@ if __name__ == "__main__":
     """
     python multimodal/document_ai.py
     """
-    # ocr the pdf and generate markdown
-    filename = args.filename
-    lines = document_ai.nougat(filename)
-    response = extract_fields(lines)
-    print(response)
-    # write the response to a json file, pretty-printed
-    with open(filename.replace(".pdf", ".json"), "w") as f:
-        f.write(json.dumps(response, indent=4))
+    if args.all:
+        # for all files in glob.glob('data/*.pdf'):
+        for filename in glob.glob('data/*.pdf'):
+            lines = document_ai.nougat(filename)
+            response = extract_fields(lines)
+            # write the response to a json file, pretty-printed
+            with open(filename.replace(".pdf", ".json"), "w") as f:
+                f.write(json.dumps(response, indent=4))
+    else:
+        # ocr the pdf and generate markdown
+        filename = args.filename
+        lines = document_ai.nougat(filename)
+        response = extract_fields(lines)
+        # write the response to a json file, pretty-printed
+        with open(filename.replace(".pdf", ".json"), "w") as f:
+            f.write(json.dumps(response, indent=4))
+        

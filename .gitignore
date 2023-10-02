@@ -19,6 +19,7 @@ multimodal/__pycache__
 multimodal/data/*.pdf
 multimodal/data/*.md
 multimodal/data/*.json
+multimodal/*.zip
 
 # computer vision
 computer_vision/out/*.png
