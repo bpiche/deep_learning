@@ -35,6 +35,8 @@ def extract_fields(lines):
     dictified['Abstract'] = dictified['Abstract'].split('\n')[0]
     # cut everything in the conclusion off after the first newline
     dictified['Conclusion'] = dictified['Conclusion'].split('\n')[0]
+    # remove the `\\({}^{1}\\)` pattern from the authors value
+    dictified['Authors'] = re.sub(r'\\({}^{.*}\\)', '', dictified['Authors'])
     response = {
         "Title": dictified['Title'],
         "Authors": dictified['Authors'],

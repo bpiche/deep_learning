@@ -20,6 +20,10 @@ Install the rest of the dependencies. The main ones are
 ```
 (deep) $> python -m pip install -r requirements.txt
 ```
+You probably need to install the spaCy model separately too
+```
+(deep) $> python -m spacy download en_core_web_lg
+```
 
 ### DocumentAI
 
@@ -51,4 +55,11 @@ It's gonna write a couple of files back to the `/.data` folder. The Nougat outpu
 Once you have written a few .json responses to the `/.data` subdirectory, you will be able to effectively use the search function. Make sure you give it a `--query` or else it will default to using the 'Show me a paper about the LayoutLMv3 model' query. This function quietly writes a `response.json` file to the `./data` subdirectory. It's a ranked list of (Title, Author, Abstract, Key Findingss, similarity) dicts, sorted by (cosine) similiarity score.
 ```
 (deep) $> python search.py --query "Show me the DIT LM model paper"
+```
+
+### Visual QA
+
+I was interested in the Donut model and its ability to perform visual question answering, so here you go. This one example actually works fairly well, but almmost nothing else I tried worked. Don't say I didn't warn you!
+```
+(deep) $> python visual_qa.py --filename lilt_lm.pdf --prompt "What is the title of this paper?"
 ```
