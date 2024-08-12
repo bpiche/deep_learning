@@ -5,14 +5,22 @@ from langchain.document_loaders import WebBaseLoader
 from langchain.llms import HuggingFacePipeline
 from langchain.vectorstores import FAISS
 
-import transformers
 from transformers import StoppingCriteria, StoppingCriteriaList
+from transformers import AutoModelForSeq2SeqLM, AutoTokenizer # quantization
+import transformers
 
 from torch import cuda, bfloat16
 import torch
 
+
 model_id = 'meta-llama/Llama-2-7b-chat-hf'
+# load openorca instead
+# model_id = 'Open-Orca/Mistral-7B-OpenOrca'
 device = f'cuda:{cuda.current_device()}' if cuda.is_available() else 'cpu'
+
+model_name = "sentence-transformers/all-mpnet-base-v2"
+# model_name = "Open-Orca/Mistral-7B-OpenOrca"
+model_kwargs = {"device": "cuda"}
 
 
 # set quantization configuration to load large model with less GPU memory
@@ -41,13 +49,8 @@ model = transformers.AutoModelForCausalLM.from_pretrained(
     device_map='auto',
     use_auth_token=hf_auth
 )
-
-
 # enable evaluation mode to allow model inference
 model.eval()
-
-
-print(f"Model loaded on {device}")
 
 
 tokenizer = transformers.AutoTokenizer.from_pretrained(
@@ -57,13 +60,8 @@ tokenizer = transformers.AutoTokenizer.from_pretrained(
 
 
 stop_list = ['\nHuman:', '\n```\n']
-
 stop_token_ids = [tokenizer(x)['input_ids'] for x in stop_list]
-stop_token_ids
-
-
 stop_token_ids = [torch.LongTensor(x).to(device) for x in stop_token_ids]
-stop_token_ids
 
 
 # define custom stopping criteria object
@@ -74,7 +72,9 @@ class StopOnTokens(StoppingCriteria):
                 return True
         return False
 
+
 stopping_criteria = StoppingCriteriaList([StopOnTokens()])
+
 
 generate_text = transformers.pipeline(
     model=model, 
@@ -88,18 +88,53 @@ generate_text = transformers.pipeline(
     repetition_penalty=1.1  # without this output begins repeating
 )
 
-res = generate_text("Explain me the difference between Data Lakehouse and Data Warehouse")
-print(res[0]["generated_text"])
-
 
 llm = HuggingFacePipeline(pipeline=generate_text)
 
-# checking again that everything is working fine
-llm(prompt="Explain me the difference between Data Lakehouse and Data Warehouse.")
 
+# TODO: read this from a config file
+web_links = ["https://www.databricks.com/",\
+             "https://help.databricks.com",
+             "https://databricks.com/try-databricks",
+             "https://help.databricks.com/s/",
+             "https://docs.databricks.com",
+             "https://kb.databricks.com/",
+             "http://docs.databricks.com/getting-started/index.html",
+             "http://docs.databricks.com/introduction/index.html",
+             "http://docs.databricks.com/getting-started/tutorials/index.html",
+             "http://docs.databricks.com/release-notes/index.html",
+             "http://docs.databricks.com/ingestion/index.html",
+             "http://docs.databricks.com/exploratory-data-analysis/index.html",
+             "http://docs.databricks.com/data-preparation/index.html",
+             "http://docs.databricks.com/data-sharing/index.html",
+             "http://docs.databricks.com/marketplace/index.html",
+             "http://docs.databricks.com/workspace-index.html",
+             "http://docs.databricks.com/machine-learning/index.html",
+             "http://docs.databricks.com/sql/index.html",
+             "http://docs.databricks.com/delta/index.html",
+             "http://docs.databricks.com/dev-tools/index.html",
+             "http://docs.databricks.com/integrations/index.html",
+             "http://docs.databricks.com/administration-guide/index.html",
+             "http://docs.databricks.com/security/index.html",
+             "http://docs.databricks.com/data-governance/index.html",
+             "http://docs.databricks.com/lakehouse-architecture/index.html",
+             "http://docs.databricks.com/reference/api.html",
+             "http://docs.databricks.com/resources/index.html",
+             "http://docs.databricks.com/whats-coming.html",
+             "http://docs.databricks.com/archive/index.html",
+             "http://docs.databricks.com/lakehouse/index.html",
+             "http://docs.databricks.com/getting-started/quick-start.html",
+             "http://docs.databricks.com/getting-started/etl-quick-start.html",
+             "http://docs.databricks.com/getting-started/lakehouse-e2e.html",
+             "http://docs.databricks.com/getting-started/free-training.html",
+             "http://docs.databricks.com/sql/language-manual/index.html",
+             "http://docs.databricks.com/error-messages/index.html",
+             "http://www.apache.org/",
+             "https://databricks.com/privacy-policy",
+             "https://databricks.com/terms-of-use"] 
 
-web_links = ["https://www.databricks.com/","https://help.databricks.com","https://databricks.com/try-databricks","https://help.databricks.com/s/","https://docs.databricks.com","https://kb.databricks.com/","http://docs.databricks.com/getting-started/index.html","http://docs.databricks.com/introduction/index.html","http://docs.databricks.com/getting-started/tutorials/index.html","http://docs.databricks.com/release-notes/index.html","http://docs.databricks.com/ingestion/index.html","http://docs.databricks.com/exploratory-data-analysis/index.html","http://docs.databricks.com/data-preparation/index.html","http://docs.databricks.com/data-sharing/index.html","http://docs.databricks.com/marketplace/index.html","http://docs.databricks.com/workspace-index.html","http://docs.databricks.com/machine-learning/index.html","http://docs.databricks.com/sql/index.html","http://docs.databricks.com/delta/index.html","http://docs.databricks.com/dev-tools/index.html","http://docs.databricks.com/integrations/index.html","http://docs.databricks.com/administration-guide/index.html","http://docs.databricks.com/security/index.html","http://docs.databricks.com/data-governance/index.html","http://docs.databricks.com/lakehouse-architecture/index.html","http://docs.databricks.com/reference/api.html","http://docs.databricks.com/resources/index.html","http://docs.databricks.com/whats-coming.html","http://docs.databricks.com/archive/index.html","http://docs.databricks.com/lakehouse/index.html","http://docs.databricks.com/getting-started/quick-start.html","http://docs.databricks.com/getting-started/etl-quick-start.html","http://docs.databricks.com/getting-started/lakehouse-e2e.html","http://docs.databricks.com/getting-started/free-training.html","http://docs.databricks.com/sql/language-manual/index.html","http://docs.databricks.com/error-messages/index.html","http://www.apache.org/","https://databricks.com/privacy-policy","https://databricks.com/terms-of-use"] 
-
+# there's actually no langchain until here
+# would love to use langchain without RAG but it could come in handy
 loader = WebBaseLoader(web_links)
 documents = loader.load()
 
@@ -107,27 +142,29 @@ documents = loader.load()
 text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=20)
 all_splits = text_splitter.split_documents(documents)
 
-model_name = "sentence-transformers/all-mpnet-base-v2"
-model_kwargs = {"device": "cuda"}
 
 embeddings = HuggingFaceEmbeddings(model_name=model_name, model_kwargs=model_kwargs)
+
 
 # storing embeddings in the vector store
 vectorstore = FAISS.from_documents(all_splits, embeddings)
 
+# can we do this without the vectorstore argument?
 chain = ConversationalRetrievalChain.from_llm(llm, vectorstore.as_retriever(), return_source_documents=True)
 
-chat_history = []
 
-query = "What is Data lakehouse architecture in Databricks?"
-result = chain({"question": query, "chat_history": chat_history})
-print(result['answer'])
-
-chat_history = [(query, result["answer"])]
-
-query = "What are Data Governance and Interoperability in it?"
-print(query + '\n')
-result = chain({"question": query, "chat_history": chat_history})
-
-print(result['answer'])
-print(result['source_documents'])
+if __name__ == '__main__':
+    """
+    """
+    chat_history = []
+    query = "Tell me about what's coming in Databricks"
+    print('\n' + query + '\n')
+    result = chain({"question": query, "chat_history": chat_history})
+    print(result['answer'])
+    chat_history = [(query, result["answer"])]
+    query = "Take the previous response and translate it into pirate speak"
+    print('\n' + query + '\n')
+    result = chain({"question": query, "chat_history": chat_history})
+    print(result['answer'])
+    # chat_history = [(query, result["answer"])]
+    # print(result['source_documents'])
