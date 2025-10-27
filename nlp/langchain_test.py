@@ -11,6 +11,10 @@ import transformers
 
 from torch import cuda, bfloat16
 import torch
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 
 model_id = 'meta-llama/Llama-2-7b-chat-hf'
@@ -34,7 +38,7 @@ bnb_config = transformers.BitsAndBytesConfig(
 
 
 # begin initializing HF items, you need an access token
-hf_auth = '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'
+hf_auth = os.getenv("HF_AUTH_TOKEN")
 model_config = transformers.AutoConfig.from_pretrained(
     model_id,
     use_auth_token=hf_auth
