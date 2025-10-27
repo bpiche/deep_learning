@@ -1,3 +1,4 @@
+from dotenv import load_dotenv
 import os
 from comet_ml import Experiment
 import torch
@@ -468,6 +469,8 @@ def main(learning_rate=5e-4, batch_size=20, epochs=10,
         train_url="train-clean-100", test_url="test-clean",
         experiment=Experiment(api_key='dummy_key', disabled=True)):
 
+    load_dotenv()
+
     hparams = {
         "n_cnn_layers": 3,
         "n_rnn_layers": 5,
@@ -526,7 +529,7 @@ def main(learning_rate=5e-4, batch_size=20, epochs=10,
         test(model, device, test_loader, criterion, epoch, iter_meter, experiment)
 
 
-comet_api_key = "9M5CGUspnfrd0T7c9fBJs5EHX"
+comet_api_key = os.getenv("COMET_API_KEY")
 project_name = "deepspeech"
 experiment_name = "experiment_0"
 

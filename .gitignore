@@ -30,3 +30,5 @@ computer_vision/min-dalle/
 
 # apple
 *:com..apple.macl
+
+.env
